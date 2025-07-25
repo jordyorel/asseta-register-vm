@@ -1,0 +1,12 @@
+// Factorial calculation
+LOAD_CONST R0, 5  // n = 5
+LOAD_CONST R1, 1  // result = 1
+LOAD_CONST R2, 1  // constant 1
+
+loop:
+MUL R1, R0        // result = result * n
+SUB R0, R2        // n = n - 1
+JMP_IF_NOT_ZERO R0 loop  // loop while n != 0
+
+PRINT_REG R1      // print result
+HALT

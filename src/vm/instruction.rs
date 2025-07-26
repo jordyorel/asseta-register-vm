@@ -1,9 +1,4 @@
 /// Define the instruction set for the virtual machine
-/// Each instruction is represented by an enum variant with a unique value
-/// The values are used to identify the instruction in the program memory
-/// The enum is also used to provide a more readable representation of the instructions
-/// The values are chosen to be sequential integers starting from 0
-/// This allows for easy conversion between the enum and the integer representation
 #[derive(Debug, Clone, Copy)]
 pub enum InstructionSet {
     LoadConst = 0,          // LOAD_CONST <reg> <value>
@@ -15,6 +10,7 @@ pub enum InstructionSet {
     Div = 6,                // DIV <reg1> <reg2>
     PrintReg = 7,           // PRINT_REG <reg>
     Halt = 8,               // HALT
-    Jmp = 9,                // JMP <addr>
-    JmpIfNotZero = 10,      // JMP_IF_NOT_ZERO <reg> <addr>
+    Jump = 9,                // JMP <addr>
+    JumpIfNotZero = 10,      // JMP_IF_NOT_ZERO <reg> <addr>
+
 }

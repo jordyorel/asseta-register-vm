@@ -1,5 +1,6 @@
 use std::time::Instant;
 use super::instruction::InstructionSet;
+use super::executor;
 
 pub const NUM_REGISTERS: usize = 4;
 pub const MAX_PROGRAM_SIZE: usize = 256;
@@ -14,6 +15,27 @@ pub struct VM {
     pub instruction_count: u64,
 }
 
+// Implement methods for the InstructionSet enum
+impl InstructionSet {
+    pub fn from_i32(value: i32) -> Option<Self> {
+        match value {
+            0 => Some(InstructionSet::LoadConst),
+            1 => Some(InstructionSet::Mov),
+            2 => Some(InstructionSet::Add),
+            3 => Some(InstructionSet::Sub),
+            4 => Some(InstructionSet::Mul),
+            5 => Some(InstructionSet::Mod),
+            6 => Some(InstructionSet::Div),
+            7 => Some(InstructionSet::PrintReg),
+            8 => Some(InstructionSet::Halt),
+            9 => Some(InstructionSet::Jump),
+            10 => Some(InstructionSet::JumpIfNotZero),
+            _ => None,
+        }
+    }
+}
+
+// Implement methods for the VM
 impl VM {
     pub fn new() -> Self {
         VM {
@@ -25,6 +47,38 @@ impl VM {
         }
     }
 
+    // Helper function to fetch register index with bounds checking
+    pub fn get_register(&mut self) -> Option<usize> {
+        if self.pc >= MAX_PROGRAM_SIZE {
+            eprintln!("Error: Not enough operands for instruction at PC={}", self.pc);
+            self.running = false;
+            return None;
+        }
+        let reg_idx = self.program[self.pc] as usize;
+        self.pc += 1; // Move to the next instruction
+        
+        if reg_idx >= NUM_REGISTERS {
+            eprintln!("Error: Invalid register index: {}", reg_idx);
+            self.running = false;
+            return None;
+        }
+        Some(reg_idx)
+    }
+
+    // Helper function to fetch immediate values with bounds checking
+    pub fn get_immediate(&mut self) -> Option<i32> {
+        if self.pc >= MAX_PROGRAM_SIZE {
+            eprintln!("Error: Not enough operands for instruction at PC={}", self.pc);
+            self.running = false;
+            return None;
+        }
+        let value = self.program[self.pc];
+        self.pc += 1; // Move to the next instruction
+        Some(value)
+    }
+
+
+    // Load a program into the VM
     pub fn load_program(&mut self, prog: &[i32]) {
         if prog.len() > MAX_PROGRAM_SIZE {
             eprintln!("Error: Program size {} exceeds maximum memory {}", prog.len(), MAX_PROGRAM_SIZE);
@@ -36,217 +90,38 @@ impl VM {
         }         
     }
 
+    /// Fetch the next instruction from the program memory
     fn fetch(&self) -> i32 {
         self.program[self.pc]
     }
 
+    /// Execute the current instruction
     fn execute(&mut self) {
         if self.pc >= MAX_PROGRAM_SIZE {
             eprintln!("Error: Program counter out of bounds: {}", self.pc);
             self.running = false;
             return;
         }
-        let instruction = self.fetch();
+
+        let instruction = match InstructionSet::from_i32(self.fetch()) {
+            Some(i) => i,
+            None => {
+                eprintln!("Error: Unknown instruction {} at PC={}", self.fetch(), self.pc);
+                self.running = false;
+                return;
+            }
+        };
         self.pc += 1;
-        self.instruction_count += 1; // Increment instruction count
+        self.instruction_count += 1;
 
         println!("PC: {}, Registers: {:?}", self.pc, self.registers);
 
-        match instruction {
-            i if i == InstructionSet::Halt as i32 => {
-                println!("HALT instruction encountered. Shutting down VM.");
-                self.running = false;
-            }
-            i if i == InstructionSet::LoadConst as i32 => {
-                if self.pc + 1 >= MAX_PROGRAM_SIZE {
-                    eprintln!("Error: Not enough operands for LOAD_CONST");
-                    self.running = false;
-                    return;
-                }
-                let reg_idx = self.program[self.pc] as usize;
-                self.pc += 1;
-                let value = self.program[self.pc];
-                self.pc += 1;
-                println!("LOAD_CONST R{}, {}", reg_idx, value);
-                if reg_idx < NUM_REGISTERS {
-                    self.registers[reg_idx] = value;
-                } else {
-                    eprintln!("Error: Invalid register index {}", reg_idx);
-                    self.running = false;
-                }
-            }
-            i if i == InstructionSet::Mov as i32 => {
-                if self.pc + 1 >= MAX_PROGRAM_SIZE {
-                    eprintln!("Error: Not enough operands for MOV");
-                    self.running = false;
-                    return;
-                }
-                let des_reg = self.program[self.pc] as usize;
-                self.pc += 1;
-                let src_reg = self.program[self.pc] as usize;
-                self.pc += 1;
-                println!("MOV R{}, R{}", des_reg, src_reg);
-                if des_reg < NUM_REGISTERS && src_reg < NUM_REGISTERS {
-                    self.registers[des_reg] = self.registers[src_reg];
-                } else {
-                    eprintln!("Error: Invalid register index");
-                    self.running = false;
-                }
-            }
-            i if i == InstructionSet::Add as i32 => {
-                if self.pc + 1 >= MAX_PROGRAM_SIZE {
-                    eprintln!("Error: Not enough operands for ADD");
-                    self.running = false;
-                    return;
-                }
-                let reg1_idx = self.program[self.pc] as usize;
-                self.pc +=1;
-                let reg2_idx = self.program[self.pc] as usize;
-                self.pc += 1;
-                println!("ADD R{}, R{}", reg1_idx, reg2_idx);
-                if reg1_idx < NUM_REGISTERS && reg2_idx < NUM_REGISTERS {
-                    self.registers[reg1_idx] += self.registers[reg2_idx];
-                } else {
-                    eprintln!("Error: Invalid register index");
-                    self.running = false;
-                }
-            }
-            i if i == InstructionSet::Sub as i32 => {
-                if self.pc + 1 >= MAX_PROGRAM_SIZE {
-                    eprintln!("Error: Not enough operands for SUB");
-                    self.running = false;
-                    return;
-                }
-                let reg1_idx = self.program[self.pc] as usize;
-                self.pc += 1;
-                let reg2_idx = self.program[self.pc] as usize;
-                self.pc += 1;
-                println!("SUB R{}, R{}", reg1_idx, reg2_idx);
-                if reg1_idx < NUM_REGISTERS && reg2_idx < NUM_REGISTERS {
-                    self.registers[reg1_idx] -= self.registers[reg2_idx];
-                } else {
-                    eprintln!("Error: Invalid register index");
-                    self.running = false;
-                }
-            }
-            i if i == InstructionSet::Mul as i32 => {
-                if self.pc + 1 >= MAX_PROGRAM_SIZE {
-                    eprintln!("Error: Not enough operands for MUL");
-                    self.running = false;
-                    return;
-                }
-                let reg1_idx = self.program[self.pc] as usize;
-                self.pc += 1;
-                let reg2_idx = self.program[self.pc] as usize;
-                self.pc += 1;
-                println!("MUL R{}, R{}", reg1_idx, reg2_idx);
-                if reg1_idx < NUM_REGISTERS && reg2_idx < NUM_REGISTERS {
-                    self.registers[reg1_idx] *= self.registers[reg2_idx];
-                } else {
-                    eprintln!("Error: Invalid register index");
-                    self.running = false;
-                }
-            }
-            i if i == InstructionSet::Mod as i32 => {
-                if self.pc + 1 >= MAX_PROGRAM_SIZE {
-                    eprintln!("Error: Not enough operands for MOD");
-                    self.running = false;
-                    return;
-                }
-                let reg1_idx = self.program[self.pc] as usize;
-                self.pc += 1;
-                let reg2_idx = self.program[self.pc] as usize;
-                self.pc += 1;
-                println!("MOD R{}, R{}", reg1_idx, reg2_idx);
-                if reg1_idx < NUM_REGISTERS && reg2_idx < NUM_REGISTERS {
-                    self.registers[reg1_idx] %= self.registers[reg2_idx];
-                } else {
-                    eprintln!("Error: Invalid register index");
-                    self.running = false;
-                }
-            }
-            i if i == InstructionSet::Div as i32 => {
-                if self.pc + 1 >= MAX_PROGRAM_SIZE {
-                    eprintln!("Error: Not enough operands for DIV");
-                    self.running = false;
-                    return;
-                }
-                let reg1_idx = self.program[self.pc] as usize;
-                self.pc += 1;
-                let reg2_idx = self.program[self.pc] as usize;
-                self.pc += 1;
-                println!("DIV R{}, R{}", reg1_idx, reg2_idx);
-                if reg1_idx < NUM_REGISTERS && reg2_idx < NUM_REGISTERS {
-                    self.registers[reg1_idx] /= self.registers[reg2_idx];
-                } else {
-                    eprintln!("Error: Invalid register index");
-                    self.running = false;
-                }
-            }
-            i if i == InstructionSet::PrintReg as i32 => {
-                if self.pc >= MAX_PROGRAM_SIZE {
-                    eprintln!("Error: Not enough operands for PRINT_REG");
-                    self.running = false;
-                    return;
-                }
-                let reg_idx = self.program[self.pc] as usize;
-                self.pc += 1;
-                println!("PRINT_REG, R{}", reg_idx);
-                if reg_idx < NUM_REGISTERS {
-                    println!("Register R{} = {}", reg_idx,  self.registers[reg_idx]);
-                } else {
-                    eprintln!("Error: Invalid register index {}", reg_idx);
-                    self.running = false;
-                }
-            }
-            i if i == InstructionSet::Jmp as i32 => {
-                if self.pc >= MAX_PROGRAM_SIZE {
-                    eprintln!("Error: Not enough operands for JMP");
-                    self.running = false;
-                    return;
-                }
-                let addr = self.program[self.pc] as usize;
-                self.pc += 1;
-                println!("JMP {}", addr);
-                if addr < MAX_PROGRAM_SIZE {
-                    self.pc = addr;
-                } else {
-                    eprintln!("Error: Invalid jump address {}", addr);
-                    self.running = false;
-                }
-            }
-            i if i == InstructionSet::JmpIfNotZero as i32 => {
-                if self.pc + 1 >= MAX_PROGRAM_SIZE {
-                    eprintln!("Error: Not enough operands for JMP_IF_NOT_ZERO");
-                    self.running = false;
-                    return;
-                }
-                let reg_idx = self.program[self.pc] as usize;
-                self.pc += 1;
-                let addr = self.program[self.pc] as usize;
-                self.pc += 1;
-                println!("JMP_IF_NOT_ZERO R{}, {}", reg_idx, addr);
-                if reg_idx < NUM_REGISTERS {
-                    if self.registers[reg_idx] != 0 {
-                        if addr < MAX_PROGRAM_SIZE {
-                            self.pc = addr;
-                        } else {
-                            eprintln!("Error: Invalid jump address {}", addr);
-                            self.running = false;
-                        }
-                    }
-                } else {
-                    eprintln!("Error: Invalid register index {} in JMP_IF_NOT_ZERO", reg_idx);
-                    self.running = false;
-                }
-            }
-            _=> {
-                eprintln!("Error: Unknown instruction {} at PC={}", instruction, self.pc - 1);
-                self.running = false;
-            }
-        }
+        // Call the executor function directly
+        executor::execute_instruction(self, instruction);
     }
 
+
+    /// Run the virtual machine
     pub fn run(&mut self) {
         println!("--- VM Start ---");
         let start = Instant::now(); // Start timing
@@ -266,4 +141,5 @@ impl VM {
             println!("Execution time too short to calculate instructions per second");
         }
     }
+
 }

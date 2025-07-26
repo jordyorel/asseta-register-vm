@@ -63,7 +63,7 @@ pub fn assemble(asm: &str) -> Vec<i32> {
                 let reg = parts[1].trim_start_matches("R").parse::<i32>().unwrap();
                 let label = parts[2];
                 let addr = *labels.get(label).expect("Unknown label") as i32;
-                program.extend([InstructionSet::JmpIfNotZero as i32, reg, addr]);
+                program.extend([InstructionSet::JumpIfNotZero as i32, reg, addr]);
             }
             "PRINT_REG" => {
                 let reg = parts[1].trim_start_matches("R").parse::<i32>().unwrap();

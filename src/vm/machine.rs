@@ -1,6 +1,6 @@
 use std::time::Instant;
 use super::instruction::InstructionSet;
-use super::executor;
+use super::executor::*;
 
 pub const NUM_REGISTERS: usize = 4;
 pub const MAX_PROGRAM_SIZE: usize = 256;
@@ -39,63 +39,49 @@ impl InstructionSet {
 impl VM {
     pub fn new() -> Self {
         VM {
-            registers: [0; NUM_REGISTERS],    // Initialize register to 0
-            pc: 0,                            // Start at instruction 0
-            program: [0; MAX_PROGRAM_SIZE],   // Initialize program memory to 0
-            running: true,                    // VM starts in running state
-            instruction_count: 0,             // Initialize to 0
+            registers: [0; NUM_REGISTERS],
+            pc: 0,
+            program: [0; MAX_PROGRAM_SIZE],
+            running: true,
+            instruction_count: 0,
         }
     }
 
-    // Helper function to fetch register index with bounds checking
-    pub fn get_register(&mut self) -> Option<usize> {
-        if self.pc >= MAX_PROGRAM_SIZE {
-            eprintln!("Error: Not enough operands for instruction at PC={}", self.pc);
-            self.running = false;
-            return None;
-        }
-        let reg_idx = self.program[self.pc] as usize;
-        self.pc += 1; // Move to the next instruction
-        
-        if reg_idx >= NUM_REGISTERS {
-            eprintln!("Error: Invalid register index: {}", reg_idx);
-            self.running = false;
-            return None;
-        }
-        Some(reg_idx)
-    }
-
-    // Helper function to fetch immediate values with bounds checking
-    pub fn get_immediate(&mut self) -> Option<i32> {
-        if self.pc >= MAX_PROGRAM_SIZE {
-            eprintln!("Error: Not enough operands for instruction at PC={}", self.pc);
-            self.running = false;
-            return None;
-        }
-        let value = self.program[self.pc];
-        self.pc += 1; // Move to the next instruction
-        Some(value)
-    }
-
-
-    // Load a program into the VM
     pub fn load_program(&mut self, prog: &[i32]) {
         if prog.len() > MAX_PROGRAM_SIZE {
             eprintln!("Error: Program size {} exceeds maximum memory {}", prog.len(), MAX_PROGRAM_SIZE);
             self.running = false;
             return;
         }
-        for (i, &instruction) in prog.iter().enumerate() {
-            self.program[i] = instruction
-        }         
+        self.program[..prog.len()].copy_from_slice(prog);
     }
 
-    /// Fetch the next instruction from the program memory
+    pub fn get_register(&mut self) -> Option<usize> {
+        if self.pc >= MAX_PROGRAM_SIZE {
+            eprintln!("Error: Program counter out of bounds: {}", self.pc);
+            self.running = false;
+            return None;
+        }
+        let reg_idx = self.program[self.pc] as usize;
+        self.pc += 1;
+        Some(reg_idx)
+    }
+
+    pub fn get_immediate(&mut self) -> Option<i32> {
+        if self.pc >= MAX_PROGRAM_SIZE {
+            eprintln!("Error: Program counter out of bounds: {}", self.pc);
+            self.running = false;
+            return None;
+        }
+        let value = self.program[self.pc];
+        self.pc += 1;
+        Some(value)
+    }
+
     fn fetch(&self) -> i32 {
         self.program[self.pc]
     }
 
-    /// Execute the current instruction
     fn execute(&mut self) {
         if self.pc >= MAX_PROGRAM_SIZE {
             eprintln!("Error: Program counter out of bounds: {}", self.pc);
@@ -114,20 +100,25 @@ impl VM {
         self.pc += 1;
         self.instruction_count += 1;
 
-        println!("PC: {}, Registers: {:?}", self.pc, self.registers);
-
-        // Call the executor function directly
-        executor::execute_instruction(self, instruction);
+        execute_instruction(self, instruction);
     }
 
-
-    /// Run the virtual machine
+    /// Run the virtual machine iteratively to avoid recursion
     pub fn run(&mut self) {
         println!("--- VM Start ---");
         let start = Instant::now(); // Start timing
-        while self.running && self.pc < MAX_PROGRAM_SIZE {
+        
+        // Use a loop instead of recursion
+        const MAX_ITERATIONS: usize = 1_000_000; // Prevent infinite loops
+        
+        while self.running && self.pc < MAX_PROGRAM_SIZE && self.instruction_count < MAX_ITERATIONS as u64 {
             self.execute();
         }
+        
+        if self.instruction_count >= MAX_ITERATIONS as u64 {
+            eprintln!("VM stopped: Reached maximum iteration limit");
+        }
+        
         let elapsed = start.elapsed(); // Get elapsed time
         println!("--- VM End ---");
         println!("Execution time: {:.6} seconds", elapsed.as_secs_f64());
@@ -141,5 +132,4 @@ impl VM {
             println!("Execution time too short to calculate instructions per second");
         }
     }
-
 }

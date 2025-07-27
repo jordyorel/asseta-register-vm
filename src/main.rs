@@ -1,27 +1,10 @@
 mod vm;
 
-use std::env;
-use std::fs;
 use vm::{assembler::assemble, machine::VM};
 
 fn main() {
-    // Get command-line arguments
-    let args: Vec<String> = env::args().collect();
-    
-    // Read assembly from file if provided, else use default
-    let asm = if args.len() > 1 {
-        let path = &args[1];
-        // Convert to absolute path if relative
-        let abs_path = if path.starts_with('/') {
-            path.to_string()
-        } else {
-            let current_dir = env::current_dir().expect("Failed to get current directory");
-            current_dir.join(path).to_string_lossy().to_string()
-        };
-        fs::read_to_string(&abs_path).expect("Failed to read .orus file")
-    } else {
-        // Default program if no file is specified
-        "
+    // Test assembly that calculates sum 1+2+3+...+10 = 55
+    let test_asm = "
         LOAD_CONST R0, 10
         LOAD_CONST R1, 1
         LOAD_CONST R2, 0
@@ -31,11 +14,15 @@ fn main() {
         JMP_IF_NOT_ZERO R0 loopStart
         PRINT_REG R2
         HALT
-        ".to_string()
-    };
+    ";
 
+    println!("Testing VM with assembly program (sum 1+2+...+10):");
+    println!("Expected result: 55\n");
+    
     let mut vm = VM::new();
-    let program = assemble(&asm);
+    let program = assemble(test_asm);
     vm.load_program(&program);
     vm.run();
+    
+    println!("\n=== VM Test Completed ===");
 }

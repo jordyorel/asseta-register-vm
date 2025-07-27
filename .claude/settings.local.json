@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo:*)",
+      "Bash(git stash:*)",
+      "Bash(rustc:*)",
+      "Bash(./test_vm)",
+      "Bash(./test_assembly)"
+    ],
+    "deny": []
+  }
+}

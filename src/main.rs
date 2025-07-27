@@ -29,7 +29,7 @@ print(sum)"#.to_string()
     // Generate code
     let mut codegen = CodeGenerator::new();
     let asm = codegen.generate(&ast);
-    println!("Generated Assembly:\n{}", asm);
+
     
     // Add HALT to end the program
     let asm_with_halt = format!("{}\nHALT", asm);

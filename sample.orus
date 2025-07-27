@@ -1,5 +1,9 @@
 // Factorial calculation
-mut sum = 0
-for i in 0..10:
-    sum = sum + i
-print(sum)
+// mut sum = 0
+// for i in 0..10:
+//     sum = sum + i
+// print(sum)
+
+
+x = 40
+print(x)

@@ -9,7 +9,9 @@
       "Bash(timeout 10s cargo run test.orus)",
       "Bash(rm:*)",
       "Bash(timeout 10s cargo run sample.orus)",
-      "Bash(gtimeout:*)"
+      "Bash(gtimeout:*)",
+      "Bash(cat:*)",
+      "Bash(sed:*)"
     ],
     "deny": []
   }

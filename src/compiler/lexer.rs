@@ -57,9 +57,6 @@ impl Lexer {
             return Some(Token::Dedent);
         }
         
-        // Skip whitespace (but not newlines)
-        self.skip_non_newline_whitespace();
-        
         // Handle start of line indentation
         if self.at_line_start {
             self.at_line_start = false;
@@ -89,6 +86,9 @@ impl Lexer {
                 }
                 return Some(Token::Dedent);
             }
+        } else {
+            // Skip whitespace (but not newlines) when not at line start
+            self.skip_non_newline_whitespace();
         }
         
         let c = match self.advance() {

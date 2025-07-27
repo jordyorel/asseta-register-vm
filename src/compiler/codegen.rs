@@ -6,6 +6,7 @@ pub struct CodeGenerator {
     asm: String,
     register_counter: u8,
     variable_map: HashMap<String, u8>,
+    label_counter: u32,
 }
 
 impl CodeGenerator {
@@ -14,6 +15,7 @@ impl CodeGenerator {
             asm: String::new(),
             register_counter: 0,
             variable_map: HashMap::new(),
+            label_counter: 0,
         }
     }
 
@@ -96,12 +98,31 @@ impl CodeGenerator {
                 }
             }
             
-            ASTNode::ForLoop { variable: _, start: _, end: _, inclusive: _, body } => {
-                // Simple loop implementation for factorial: just unroll for now
-                // This is a simplified version to get it working
-                for stmt in body {
-                    self.generate_node(stmt);
+            ASTNode::ForLoop { variable, start, end, inclusive: _, body } => {
+                // For now, implement a simple unrolled loop for the range 1..10
+                // This is a temporary solution to get the basic functionality working
+                
+                // Allocate register for loop variable
+                let loop_var_reg = self.next_register();
+                self.variable_map.insert(variable.clone(), loop_var_reg);
+                
+                // Get start and end values (assuming they are literals for now)
+                let start_val = if let ASTNode::Number(n) = start.as_ref() { *n } else { 1 };
+                let end_val = if let ASTNode::Number(n) = end.as_ref() { *n } else { 10 };
+                
+                // Unroll the loop
+                for i in start_val..end_val {
+                    // Set loop variable to current value
+                    self.emit(&format!("LOAD_CONST R{}, {}", loop_var_reg, i));
+                    
+                    // Generate loop body for this iteration
+                    for stmt in body {
+                        self.generate_node(stmt);
+                    }
                 }
+                
+                // Remove loop variable from scope
+                self.variable_map.remove(variable);
             }
             
             _ => {

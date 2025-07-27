@@ -18,17 +18,13 @@ fn main() {
 print(sum)"#.to_string()
     };
 
-    println!("Compiling source...");
-    
     // Tokenize
     let mut lexer = Lexer::new(&source);
     let tokens = lexer.tokenize();
-    println!("Tokens: {:?}", tokens);
     
     // Parse
     let mut parser = Parser::new(tokens);
     let ast = parser.parse();
-    println!("AST: {:?}", ast);
     
     // Generate code
     let mut codegen = CodeGenerator::new();

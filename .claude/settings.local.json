@@ -5,7 +5,11 @@
       "Bash(git stash:*)",
       "Bash(rustc:*)",
       "Bash(./test_vm)",
-      "Bash(./test_assembly)"
+      "Bash(./test_assembly)",
+      "Bash(timeout 10s cargo run test.orus)",
+      "Bash(rm:*)",
+      "Bash(timeout 10s cargo run sample.orus)",
+      "Bash(gtimeout:*)"
     ],
     "deny": []
   }

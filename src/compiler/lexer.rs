@@ -66,9 +66,15 @@ impl Lexer {
             let indent = self.skip_whitespace();
             
             if self.peek() == Some('\n') || self.peek().is_none() {
-                // Blank line, reset and continue
-                self.at_line_start = true;
-                return self.next_token();
+                // Blank line, skip it
+                if self.peek() == Some('\n') {
+                    self.advance(); // consume the newline
+                    self.at_line_start = true;
+                    return Some(Token::Newline);
+                } else {
+                    // At EOF, don't set at_line_start again
+                    return None;
+                }
             }
             
             let current_indent = self.indent_stack.last().unwrap();
@@ -127,8 +133,23 @@ impl Lexer {
                 }
                 num.parse().ok().map(Token::Number)
             }
-            '+' | '-' | '*' | '/' | '=' => Some(Token::Operator(c.to_string())),
-            _ => None,
+            '+' | '-' | '*' | '=' | '(' | ')' => Some(Token::Operator(c.to_string())),
+            '/' => {
+                if self.peek() == Some('/') {
+                    // Line comment - skip to end of line
+                    self.advance(); // consume second '/'
+                    while let Some(ch) = self.peek() {
+                        if ch == '\n' {
+                            break;
+                        }
+                        self.advance();
+                    }
+                    self.next_token() // Skip the comment and get next token
+                } else {
+                    Some(Token::Operator("/".to_string()))
+                }
+            }
+            _ => self.next_token(), // Skip unknown characters
         }
     }
     

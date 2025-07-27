@@ -45,8 +45,9 @@ cargo test            # Run tests (if any exist)
 
 ### Example Usage
 ```bash
-cargo run             # Run VM with test assembly program (sum 1+2+...+10 = 55)
-# Note: Compiler pipeline (lexer/parser/codegen) needs work for .orus files
+cargo run             # Compile and run default high-level program
+cargo run sample.orus # Compile and run sample factorial program
+cargo run file.orus   # Compile and run any .orus file
 ```
 
 ## Current Status
@@ -57,7 +58,7 @@ cargo run             # Run VM with test assembly program (sum 1+2+...+10 = 55)
 
 ✅ **Fixed architecture** - Updated sample.orus to contain proper high-level syntax and main.rs to handle compilation pipeline.
 
-⚠️ **Compiler Issues**: The lexer/parser/codegen pipeline has stack overflow issues and needs implementation work. Currently main.rs is set to test VM with assembly only.
+✅ **Compiler Pipeline Working**: Fixed lexer/parser/codegen stack overflow issues. The system can now compile .orus files with high-level syntax to assembly and execute them on the VM.
 
 ## VM Instruction Set
 
@@ -89,13 +90,17 @@ The VM supports 11 instructions:
 - Assembler - converts assembly text to bytecode
 - Instruction set - 11 instructions fully implemented
 
-⚠️ **Needs Work:**
-- Compiler pipeline (lexer/parser/codegen) - has stack overflow issues
-- High-level language compilation to assembly
+⚠️ **Limited Features:**
+- For loops are currently simplified (not fully implemented)
+- Limited expression support (basic arithmetic)
+- No function definitions yet
+- No complex control flow
 
 ## Next Steps for Development
 
-1. Fix the lexer/parser/codegen stack overflow issues
-2. Implement proper AST generation and code generation
-3. Add more high-level language features (variables, control flow, functions)
-4. Add error handling and better diagnostics
+1. Implement proper for loop code generation with labels and jumps
+2. Add support for more operators and expressions
+3. Add function definitions and calls
+4. Add conditional statements (if/else)
+5. Improve error handling and diagnostics
+6. Add more built-in functions

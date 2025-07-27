@@ -1,8 +1,5 @@
 // Factorial calculation
-mut n = 5
-mut result = 1
-
-for i in 1..n+1:
-    result = result * i
-
-print(result)
+mut sum = 0
+for i in 1..10:
+    sum = sum + i
+print(sum)

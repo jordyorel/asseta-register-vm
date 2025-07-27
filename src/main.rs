@@ -1,28 +1,46 @@
+mod compiler;
 mod vm;
 
+use std::env;
+use std::fs;
+use compiler::{lexer::Lexer, parser::Parser, codegen::CodeGenerator};
 use vm::{assembler::assemble, machine::VM};
 
 fn main() {
-    // Test assembly that calculates sum 1+2+3+...+10 = 55
-    let test_asm = "
-        LOAD_CONST R0, 10
-        LOAD_CONST R1, 1
-        LOAD_CONST R2, 0
-        loopStart:
-        ADD R2, R0
-        SUB R0, R1
-        JMP_IF_NOT_ZERO R0 loopStart
-        PRINT_REG R2
-        HALT
-    ";
-
-    println!("Testing VM with assembly program (sum 1+2+...+10):");
-    println!("Expected result: 55\n");
+    let args: Vec<String> = env::args().collect();
     
+    let source = if args.len() > 1 {
+        let path = &args[1];
+        fs::read_to_string(path).expect("Failed to read .orus file")
+    } else {
+        // Default program - simple without indentation issues
+        r#"mut sum = 5
+print(sum)"#.to_string()
+    };
+
+    println!("Compiling source...");
+    
+    // Tokenize
+    let mut lexer = Lexer::new(&source);
+    let tokens = lexer.tokenize();
+    println!("Tokens: {:?}", tokens);
+    
+    // Parse
+    let mut parser = Parser::new(tokens);
+    let ast = parser.parse();
+    println!("AST: {:?}", ast);
+    
+    // Generate code
+    let mut codegen = CodeGenerator::new();
+    let asm = codegen.generate(&ast);
+    println!("Generated Assembly:\n{}", asm);
+    
+    // Add HALT to end the program
+    let asm_with_halt = format!("{}\nHALT", asm);
+    
+    // Assemble and run
+    let program = assemble(&asm_with_halt);
     let mut vm = VM::new();
-    let program = assemble(test_asm);
     vm.load_program(&program);
     vm.run();
-    
-    println!("\n=== VM Test Completed ===");
 }

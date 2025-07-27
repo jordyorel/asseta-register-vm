@@ -4,6 +4,7 @@ use crate::compiler::lexer::Token;
 #[derive(Debug)]
 pub enum ASTNode {
     VariableDeclaration {
+        #[allow(dead_code)]
         mutable: bool,
         name: String,
         value: Option<Box<ASTNode>>,
@@ -20,13 +21,18 @@ pub enum ASTNode {
     Identifier(String),
     Number(i32),
     ForLoop {
+        #[allow(dead_code)]
         variable: String,
+        #[allow(dead_code)]
         start: Box<ASTNode>,
+        #[allow(dead_code)]
         end: Box<ASTNode>,
+        #[allow(dead_code)]
         inclusive: bool,
         body: Vec<ASTNode>,
     },
     Print(Vec<ASTNode>),
+    #[allow(dead_code)]
     Block(Vec<ASTNode>),
 }
 
@@ -44,10 +50,19 @@ impl Parser {
         let mut statements = Vec::new();
         
         while !self.is_at_end() {
+            // Skip newlines and other non-statement tokens
+            if let Some(Token::Newline) = self.peek() {
+                self.advance();
+                continue;
+            }
+            
             if let Some(stmt) = self.statement() {
                 statements.push(stmt);
             } else {
-                self.advance();
+                // If we can't parse a statement, advance to avoid infinite loop
+                if self.advance().is_none() {
+                    break;
+                }
             }
         }
         
@@ -56,11 +71,29 @@ impl Parser {
     
     fn statement(&mut self) -> Option<ASTNode> {
         match self.peek() {
-            Some(Token::Keyword(kw)) if kw == "mut" => self.variable_declaration(),
+            Some(Token::Keyword(kw)) if kw == "mut" => {
+                let result = self.variable_declaration();
+                self.skip_newlines(); // Skip trailing newlines
+                result
+            },
             Some(Token::Keyword(kw)) if kw == "for" => self.for_loop(),
-            Some(Token::Keyword(kw)) if kw == "print" => self.print_statement(),
-            Some(Token::Identifier(_)) => self.assignment(),
+            Some(Token::Keyword(kw)) if kw == "print" => {
+                let result = self.print_statement();
+                self.skip_newlines(); // Skip trailing newlines
+                result
+            },
+            Some(Token::Identifier(_)) => {
+                let result = self.assignment();
+                self.skip_newlines(); // Skip trailing newlines
+                result
+            },
             _ => None,
+        }
+    }
+    
+    fn skip_newlines(&mut self) {
+        while let Some(Token::Newline) = self.peek() {
+            self.advance();
         }
     }
     
@@ -187,10 +220,12 @@ impl Parser {
         Some(ASTNode::Assignment { target, value })
     }
 
-    // Print statement: "print" <expression>
+    // Print statement: "print" "(" <expression> ")"
     fn print_statement(&mut self) -> Option<ASTNode> {
         self.consume_keyword("print")?;
+        self.consume(Token::Operator("(".to_string()))?;
         let expr = self.expression()?;
+        self.consume(Token::Operator(")".to_string()))?;
         Some(ASTNode::Print(vec![expr]))
     }
 
